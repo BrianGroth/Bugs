@@ -11,11 +11,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Preload assets
   const loader = PIXI.Loader.shared;
-  for (let i = 0; i < FLY_FRAMES; i++) {
-    loader.add(`fly${i}`, `assets/mosquito/frame_${i}.png`);
+  for (let i = 1; i <= FLY_FRAMES; i++) { // Start from 1 instead of 0
+    loader.add(`fly${i - 1}`, `assets/mosquito/frame_${i}.png`); // Map to frame_1.png through frame_12.png
   }
-  for (let i = 0; i < SPLAT_FRAMES; i++) {
-    loader.add(`splat${i}`, `assets/mosquito/splat_${i}.png`);
+  for (let i = 1; i <= SPLAT_FRAMES; i++) { // Start from 1 instead of 0
+    loader.add(`splat${i - 1}`, `assets/mosquito/splat_${i}.png`); // Map to splat_1.png through splat_6.png
   }
 
   // After assets are loaded, run setup
