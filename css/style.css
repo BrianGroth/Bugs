@@ -1,46 +1,141 @@
-/* style.css - Styling for Mosquito Squish Game */
+// app.js - Mosquito Squish Game
 
-/* Reset default page margins and ensure full-screen canvas */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: #1099bb; /* Matches PIXI background */
-  font-family: Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+// Initialize game after full window load
+window.onload = function() {
+  console.log('Window loaded, initializing PIXI Application');
+  const app = new PIXI.Application({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundColor: 0x1099bb,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true
+  });
+  document.body.appendChild(app.view);
+
+  // Handle resizing
+  window.addEventListener('resize', function() {
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+  });
+
+  // Preload assets
+  const loader = new PIXI.Loader();
+  for (let i = 0; i < 12; i++) {
+    loader.add('fly' + i, 'assets/mosquito/frame_' + i + '.png');
+  }
+  for (let j = 0; j < 6; j++) {
+    loader.add('splat' + j, 'assets/mosquito/splat_' + j + '.png');
+  }
+
+  loader.onError.add(function(error, loader, resource) {
+    console.error('Error loading resource:', resource.url, error);
+  });
+
+  loader.load(function(loader, resources) {
+    console.log('Assets loaded:', Object.keys(resources));
+    setup(app);
+  });
+};
+
+// Game state
+let level = 1;
+let remaining;
+let timer = 5;
+let timerText;
+let mosquitoContainer;
+
+function setup(app) {
+  // Timer display
+  timerText = new PIXI.Text('Time: ' + timer.toFixed(2), {
+    fontFamily: 'Arial',
+    fontSize: 24,
+    fill: 0xffffff
+  });
+  timerText.position.set(10, 10);
+  app.stage.addChild(timerText);
+
+  // Container for bugs
+  mosquitoContainer = new PIXI.Container();
+  app.stage.addChild(mosquitoContainer);
+
+  // Start first level
+  nextLevel(app);
+
+  // Game loop
+  app.ticker.add(function(delta) { gameLoop(delta, app); });
 }
 
-/* Ensure the PIXI canvas fills the screen */
-canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
+function nextLevel(app) {
+  mosquitoContainer.removeChildren();
+  remaining = level + 2;
+  timer = 5;
+  timerText.text = 'Time: ' + timer.toFixed(2);
+  for (let i = 0; i < remaining; i++) {
+    spawnMosquito(app);
+  }
 }
 
-/* Loading indicator (optional) */
-#loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: bold;
-  pointer-events: none;
+function spawnMosquito(app) {
+  var frames = [];
+  for (var i = 0; i < 12; i++) {
+    frames.push(PIXI.Texture.from('fly' + i));
+  }
+  var m = new PIXI.AnimatedSprite(frames);
+  m.animationSpeed = 0.2 + Math.random() * 0.1;
+  m.loop = true;
+  m.play();
+  m.anchor.set(0.5);
+  m.x = Math.random() * app.renderer.width;
+  m.y = Math.random() * app.renderer.height;
+  m.interactive = true;
+  m.buttonMode = true;
+  m.on('pointerdown', function() { squish(m, app); });
+  app.stage.addChild(m);
 }
 
-/* Game Over overlay (optional extra styling) */
-.game-over-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #ff0000;
-  font-size: 48px;
-  font-weight: bold;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
+function squish(mosquito, app) {
+  mosquito.stop();
+  mosquito.visible = false;
+  var splatFrames = [];
+  for (var i = 0; i < 6; i++) {
+    splatFrames.push(PIXI.Texture.from('splat' + i));
+  }
+  var s = new PIXI.AnimatedSprite(splatFrames);
+  s.anchor.set(0.5);
+  s.x = mosquito.x;
+  s.y = mosquito.y;
+  s.animationSpeed = 0.3;
+  s.loop = false;
+  s.onComplete = function() {
+    app.stage.removeChild(s);
+    remaining--;
+    if (remaining === 0) {
+      level++;
+      nextLevel(app);
+    }
+  };
+  app.stage.addChild(s);
+  s.play();
+}
+
+function gameLoop(delta, app) {
+  if (remaining > 0) {
+    timer -= delta / 60;
+    timerText.text = 'Time: ' + timer.toFixed(2);
+    if (timer <= 0) {
+      stopGame(app);
+    }
+  }
+}
+
+function stopGame(app) {
+  app.ticker.stop();
+  var gameOverText = new PIXI.Text('Game Over', {
+    fontFamily: 'Arial',
+    fontSize: 48,
+    fill: 0xff0000
+  });
+  gameOverText.anchor.set(0.5);
+  gameOverText.x = app.renderer.width / 2;
+  gameOverText.y = app.renderer.height / 2;
+  app.stage.addChild(gameOverText);
 }
